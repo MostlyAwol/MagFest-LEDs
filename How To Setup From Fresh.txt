@@ -1,24 +1,12 @@
-sudo raspi-config
-* Change Hostname
-* Change Password
-* Change Language
-* Change Timezone
-* Change Keyboard layout.
 sudo apt update
 sudo apt upgrade
-sudo apt install git
-
-
-git clone https://github.com/jgarff/rpi_ws281x.git
-cd rpi_ws281x
 sudo apt-get install python-dev swig scons
-sudo scons
-cd python
-sudo python setup.py build install
 sudo apt-get install python-pip
-#sudo pip install pysnmp
 sudo apt-get install libsnmp-dev snmp-mibs-downloader
 sudo apt-get install gcc python-dev
+
+
+
 sudo pip install easysnmp
 
 

@@ -4,18 +4,16 @@
 # Last Update Nov. 28, 2025
 
 import time
-import neopixel
+import neopixel # type: ignore
 import argparse
-import random
 import socket
 import threading
 import sys
-from easysnmp import Session
+from easysnmp import Session # type: ignore
 from array import *
-import json
 import os
 import subprocess
-import board
+import board # type: ignore
 ##############################################################################################################
 # Global Variables (I know I shouldn't)
 ##############################################################################################################
@@ -27,7 +25,6 @@ version = "2.2025.11.28a"
 MAX_LENGTH = 4096
 last_percent = -1
 last_scale = 0
-miss_count = 0
 color_split = 45 #NO IDEA WHAT YOU DO?
 doing_what = "RAINBOW"
 arg_1 = ""
@@ -35,7 +32,7 @@ arg_2 = ""
 last_command = ''
 hostname = socket.gethostname()
 
-switch_ip = ""
+switch_ip = None
 #switch_mib = "1.3.6.1.2.1.2.2.1.10.2" #Quanta Switches wrong one though...
 #switch_mib = "1.3.6.1.2.1.2.2.1.10.49" #SHould be the real port to monitor!!!
 switch_mib = "1.3.6.1.2.1.2.2.1.10.6" #UDR7 Port 4
@@ -197,7 +194,6 @@ def Beat(strip, color, speed=20):
 				direction = 0
 				position = 0
 		strip.show()			
-		#time.sleep(speed/1000)
 		global stop_threads
 		if stop_threads:
 			break
@@ -226,7 +222,6 @@ def RBeat(strip, color, speed=20):
 				direction = 0
 				position = 0
 		strip.show()			
-		#time.sleep(speed/1000)
 		global stop_threads
 		if stop_threads:
 			break
@@ -260,7 +255,6 @@ def RBBeat(strip, speed=20):
 				if current_color >= 6:
 					current_color = 0
 		strip.show()			
-		#time.sleep(speed/1000)
 		global stop_threads
 		if stop_threads:
 			break
@@ -287,9 +281,7 @@ def LEDBandWidth(strip, percent, color_split, scale):
 		colorFill(strip, (0,0,0))
 
 	if percent < last_percent:
-		#print "SHRINK IT!!!"
 		for i in range(last_percent, percent,-1):
-			#print("I="+ str(i))
 			strip[i*5-1] = (0,0,0)
 			strip[i*5-2] = (0,0,0)
 			strip[i*5-3] = (0,0,0)
@@ -300,8 +292,6 @@ def LEDBandWidth(strip, percent, color_split, scale):
 			#Delay should depend on how many pixels are changing. Faster for more and slower for less?
 			if i - percent <= 5:
 				time.sleep(25/1000)
-			#else:
-			#	time.sleep(1/1000)
 
 
 	if percent > last_percent: #Color 
@@ -314,7 +304,6 @@ def LEDBandWidth(strip, percent, color_split, scale):
 			if color_value > 255:
 				color_value = 255
 
-			#print "I="+ str(i) +"   R="+ str(red) +" G="+ str(green)
 			if scale == 0: #1 000 00 bits PURPLE
 				LED_Color = (color_value,0, color_value)
 			if scale == 1: #10 000 00 bits BLUE
@@ -337,8 +326,6 @@ def LEDBandWidth(strip, percent, color_split, scale):
 
 			if percent - i <= 5:
 				time.sleep(25/1000)
-			#else:
-			#	time.sleep(1/1000)
 
 	last_percent = percent
 	last_scale = scale
@@ -347,7 +334,6 @@ def MonitorBandwidth(switch_ip, snmp_mib):
 	old_bytes = 0;
 	current_bytes = 0
 	global bandwidth_rate
-	#max_bytes_per_second = bandwidth_rate / 8; #100Mbps Line
 	bandwidth = []
 	scale = 0
 	last_scale = 0
@@ -359,7 +345,6 @@ def MonitorBandwidth(switch_ip, snmp_mib):
 		max_bytes_per_second = bandwidth_rate / 8; #100Mbps Line
 		# Create an SNMP session to be used for all our requests
 		# You may retrieve an individual OID using an SNMP GET
-		#location = session.get('.1.3.6.1.2.1.2.2.1.10.4')
 		location = session.get(snmp_mib)
 		current_bytes = int(location.value)
 		bandwidth_used = 0;
@@ -384,15 +369,12 @@ def MonitorBandwidth(switch_ip, snmp_mib):
 
 		avr_bandwidth = total / len(bandwidth)
 		percent = avr_bandwidth / float(max_bytes_per_second) * 100
-		#percent = bandwidth_used / float(max_bytes_per_second) * 100
 		percent = int(percent)
 		
-		#print(f"Bandwidth Percentage: {percent} | Scale: {scale} | Rate: {bandwidth_rate}")
 		#This is the Scale of the LEDs being lit up
 		if percent >= 100:
 			bandwidth_rate = bandwidth_rate * 10
 			scale = scale + 1
-			#print("Bandwidth Up " + str(bandwidth_rate))
 			if bandwidth_rate >= 10000000000:
 				bandwidth_rate = 10000000000
 				scale = 5
@@ -400,7 +382,6 @@ def MonitorBandwidth(switch_ip, snmp_mib):
 		if percent <= 5:
 			bandwidth_rate = bandwidth_rate / 10
 			scale = scale - 1
-			#print("Bandwidth Down " + str(bandwidth_rate))
 			if bandwidth_rate <= 10000:
 				bandwidth_rate = 10000
 				scale = -1
@@ -513,9 +494,6 @@ ORDER = neopixel.GRB
 # Create NeoPixel object with appropriate configuration.
 strip = neopixel.NeoPixel(LED_PIN, LED_COUNT, brightness=0.2, auto_write=False, pixel_order=ORDER)
 
-# Intialize the library (must be called once before other functions).
-#strip.begin()
-
 #Setup Sockets for listening for Commands
 if protocol_mode == "TCP":
 	serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #SOCK_STREAM (TCP) or SOCK_DGRAM (UDP)
@@ -535,27 +513,24 @@ socket_thread.start()
 
 print('Press Ctrl-C to quit.')
 
-#print "Debug and Thread creation?"
 LED_thread = threading.Thread(target=DebugLED, args=(strip, (0,255,0))) #On and Ready
 LED_thread.start()
 last_command = "start"
 print(f"Debug Showing Version: {version}")
 
 #Find the switch IP address we are plugged into with lldp
-switch_ip = get_switch_ip()
 #switch_ip = None
-if switch_ip is None:
+while switch_ip is None:
+	switch_ip = get_switch_ip()
 	doing_what = "FF"
-	arg_1 = "FF0000"
-else:
-	doing_what = "BANDWIDTH"
-#if not found go to error mode
+	arg_1 = "FFCC00"
+	if switch_ip is None:
+		time.sleep(5 * 60)
+
+doing_what = "BANDWIDTH"
 
 try:
 	while True:
-
-		#print "-= Main Loop =-"
-
 		#Check if we are doing something based on the doing_what being filled in by the socket
 		if doing_what.upper() != "":
 			print("Doing What: " + doing_what)

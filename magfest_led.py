@@ -464,8 +464,6 @@ def get_switch_ip(interface="eth0") -> str | None:
         return None
 
     mgmt_ip = None
-    current_iface = None
-
     for line in result.stdout.splitlines():
         if "=" not in line:
             continue
@@ -520,12 +518,30 @@ print(f"Debug Showing Version: {version}")
 
 #Find the switch IP address we are plugged into with lldp
 #switch_ip = None
+config_count = 0
 while switch_ip is None:
 	switch_ip = get_switch_ip()
-	doing_what = "FF"
-	arg_1 = "FFCC00"
+	StopLED()
+	try:
+		color = "FFCC00"
+		color = tuple(int(arg_1[i:i+2], 16) for i in (0, 2, 4))
+		LED_thread = threading.Thread(target=FlipFlop, args=(strip, (int(color[0]),int(color[1]),int(color[2]))))
+		LED_thread.start()
+	except:
+		print("Flip Flop Error")
 	if switch_ip is None:
-		time.sleep(5 * 60)
+		config_count = config_count + 1
+		if config_count < 6:
+			time.sleep(5 * 60)
+		else:
+			StopLED()
+			try:
+				color = "FF0000"
+				color = tuple(int(arg_1[i:i+2], 16) for i in (0, 2, 4))
+				LED_thread = threading.Thread(target=FlipFlop, args=(strip, (int(color[0]),int(color[1]),int(color[2]))))
+				LED_thread.start()
+			except:
+				print("Flip Flop Error")
 
 doing_what = "BANDWIDTH"
 

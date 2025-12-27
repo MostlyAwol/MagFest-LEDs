@@ -14,6 +14,7 @@ from array import *
 import os
 import subprocess
 import board # type: ignore
+import signal
 ##############################################################################################################
 # Global Variables (I know I shouldn't)
 ##############################################################################################################
@@ -47,6 +48,12 @@ exit_event = threading.Event()
 stop_threads = False
 socket_run = True
 ##############################################################################################################
+running = True
+
+def shutdown(signum, frame):
+    global running
+    print(f"Received signal {signum}, shutting down cleanly...")
+    running = False
 
 # Define functions which animate LEDs in various ways.
 def colorWipe(strip, color, wait_ms=50):
@@ -546,7 +553,7 @@ while switch_ip is None:
 doing_what = "BANDWIDTH"
 
 try:
-	while True:
+	while running:
 		#Check if we are doing something based on the doing_what being filled in by the socket
 		if doing_what.upper() != "":
 			print("Doing What: " + doing_what)
@@ -665,6 +672,16 @@ try:
 		arg_1 = ""
 		arg_2 = ""
 		time.sleep(1)
+	
+	print("Cleanup complete, exiting.")
+	exit_event.set()
+	#Blanking LED
+	StopLED()
+	print("Turning off LEDs")
+	colorFill(strip, (0,0,0))
+	strip.show()	
+	#Exiting
+	sys.exit(0)
 		
 except KeyboardInterrupt:
 	print("Keyboard Interrupt Starting to Exit")

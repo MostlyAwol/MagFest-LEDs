@@ -15,6 +15,15 @@ import os
 import subprocess
 import board # type: ignore
 import signal
+
+
+print("=== MAGFEST START ===")
+print("EUID:", os.geteuid())
+print("EXE :", sys.executable)
+print("CWD :", os.getcwd())
+sys.stdout.flush()
+time.sleep(1)
+
 ##############################################################################################################
 # Global Variables (I know I shouldn't)
 ##############################################################################################################

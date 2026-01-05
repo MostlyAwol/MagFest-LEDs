@@ -31,7 +31,7 @@ time.sleep(1)
 protocol_mode = "UDP"
 PORT = 42424
 HOST = ''
-version = "2.2025.11.28a"
+version = "2.2026.01.05"
 MAX_LENGTH = 4096
 last_percent = -1
 last_scale = 0
@@ -44,8 +44,8 @@ hostname = socket.gethostname()
 
 switch_ip = None
 #switch_mib = "1.3.6.1.2.1.2.2.1.10.2" #Quanta Switches wrong one though...
-#switch_mib = "1.3.6.1.2.1.2.2.1.10.49" #SHould be the real port to monitor!!!
-switch_mib = "1.3.6.1.2.1.2.2.1.10.6" #UDR7 Port 4
+switch_mib = "1.3.6.1.2.1.2.2.1.10.49" #SHould be the real port to monitor!!!
+#switch_mib = "1.3.6.1.2.1.2.2.1.10.6" #UDR7 Port 4
 bandwidth_rate = 1000000
 
 #LED Defaults?

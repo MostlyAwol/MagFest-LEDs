@@ -31,7 +31,7 @@ time.sleep(1)
 protocol_mode = "UDP"
 PORT = 42424
 HOST = ''
-version = "2.2026.01.05"
+version = "2.2026.01.08"
 MAX_LENGTH = 4096
 last_percent = -1
 last_scale = 0
@@ -558,7 +558,7 @@ while switch_ip is None:
 				LED_thread.start()
 			except:
 				print("Flip Flop Error")
-
+print(f"Switch IP for me: {switch_ip}")
 doing_what = "BANDWIDTH"
 
 try:

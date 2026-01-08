@@ -15,7 +15,7 @@ import os
 import subprocess
 import board # type: ignore
 import signal
-
+from easysnmp.exceptions import EasySNMPTimeoutError # type: ignore
 
 print("=== MAGFEST START ===")
 print("EUID:", os.geteuid())
@@ -31,7 +31,7 @@ time.sleep(1)
 protocol_mode = "UDP"
 PORT = 42424
 HOST = ''
-version = "2.2026.01.08a"
+version = "2.2026.01.08b"
 MAX_LENGTH = 4096
 last_percent = -1
 last_scale = 0
@@ -347,7 +347,7 @@ def LEDBandWidth(strip, percent, color_split, scale):
 	last_scale = scale
 
 def MonitorBandwidth(switch_ip, snmp_mib):
-	old_bytes = 0;
+	old_bytes = 0
 	current_bytes = 0
 	global bandwidth_rate
 	bandwidth = []
@@ -356,14 +356,19 @@ def MonitorBandwidth(switch_ip, snmp_mib):
 	fillcolor = [(255,0,0),(0,255,0),(0,0,255)]
 	current_color = 0
 
-	session = Session(hostname=switch_ip, community='public', version=2)
+	session = Session(hostname=switch_ip, community='public', version=2,timeout=2, retries=2,)
 	while True:
 		max_bytes_per_second = bandwidth_rate / 8; #100Mbps Line
 		# Create an SNMP session to be used for all our requests
 		# You may retrieve an individual OID using an SNMP GET
-		location = session.get(snmp_mib)
-		current_bytes = int(location.value)
-		bandwidth_used = 0;
+		try:
+			location = session.get(snmp_mib)
+			current_bytes = int(location.value)
+		except EasySNMPTimeoutError:
+			time.sleep(1)
+			continue
+	
+		bandwidth_used = 0
 
 		if current_bytes >= old_bytes:
 			if old_bytes != 0:
@@ -413,7 +418,7 @@ def MonitorBandwidth(switch_ip, snmp_mib):
 			LEDBandWidth(strip, percent, color_split, scale)
 		old_bytes = current_bytes
 		last_scale = scale
-		time.sleep(0.5)
+		time.sleep(1.0)
 		global stop_threads
 		if stop_threads:
 			break

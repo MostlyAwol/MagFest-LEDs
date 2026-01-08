@@ -31,7 +31,7 @@ time.sleep(1)
 protocol_mode = "UDP"
 PORT = 42424
 HOST = ''
-version = "2.2026.01.08c"
+version = "2.2026.01.08d"
 MAX_LENGTH = 4096
 last_percent = -1
 last_scale = 0
@@ -452,6 +452,7 @@ def handle(socket_data):
 
 	if protocol_mode == "UDP":
 		buf = socket_data #clientsocket.recv(MAX_LENGTH) #Is this Blocking?
+		buf = buf.decode("ascii")
 
 	words = buf.split(" ")
 

@@ -1,0 +1,28 @@
+[Unit]
+Description=MagFest LAN bandwidth LEDs
+After=network.target lldpd.service
+Wants=lldpd.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=root
+WorkingDirectory=/opt/MagFest-LEDs
+# Change this executable if your dependencies are installed in a virtualenv.
+ExecStart=/usr/bin/python3 -u /opt/MagFest-LEDs/magfest_led.py
+EnvironmentFile=-/etc/default/magfest-led
+RuntimeDirectory=magfest-led
+Restart=on-failure
+RestartSec=5
+WatchdogSec=30
+TimeoutStartSec=30
+TimeoutStopSec=15
+KillMode=control-group
+LimitCORE=0
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=magfest-led
+
+[Install]
+WantedBy=multi-user.target

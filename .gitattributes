@@ -1,0 +1,2 @@
+# The boot script must remain executable by a Linux /bin/sh after checkout.
+*.sh text eol=lf

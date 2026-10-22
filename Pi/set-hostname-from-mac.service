@@ -1,0 +1,13 @@
+[Unit]
+Description=Set hostname from MAC (last 3 octets) on first boot
+After=local-fs.target dbus.service systemd-hostnamed.service
+Before=network.target
+ConditionPathExists=!/var/lib/hostname-from-mac.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/set-hostname-from-mac.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

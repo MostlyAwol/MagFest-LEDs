@@ -1,5 +1,9 @@
 # MagFest-LEDs
 
+> Start with [PI_SETUP_GUIDE.md](PI_SETUP_GUIDE.md) for the consolidated guide:
+> fresh Raspberry Pi OS installation, dependencies, wiring checks, services,
+> commands, diagnostics, updates, rollback, and fleet provisioning.
+>
 > The reliability update is documented in [RELIABILITY.md](RELIABILITY.md),
 > including current commands, visible fault states, and remote status queries.
 > The existing notes below describe version `2.2026.01.08d` and are retained

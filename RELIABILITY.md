@@ -1,5 +1,9 @@
 # Controller reliability and troubleshooting
 
+The consolidated installation and operations manual is
+[PI_SETUP_GUIDE.md](PI_SETUP_GUIDE.md). Use it for the full fresh-OS setup;
+this file retains the reliability change notes and supporting details.
+
 This describes version `3.2026.10.21`. Changes are local source changes; no Pi
 has been updated. The LED hardware remains 300 GRB pixels on GPIO 18 at 0.2
 brightness. No new Python dependency is required by the controller.
@@ -35,10 +39,9 @@ that fails or makes no progress for 15 seconds causes a logged, nonzero process
 exit. A replacement LED worker is never started while an old worker is stuck.
 
 Python cannot guarantee recovery from a native driver deadlock, segfault, Pi
-lockup, power loss, or failed SD card. A process supervisor is required to
-restart after a fatal exit. The optional service file provides that later;
-your current boot script will not automatically gain restart behavior just by
-downloading this Python file.
+lockup, power loss, or failed SD card. The recovered `runled.service` already
+restarts fatal process failures. Its revised version also configures a process
+watchdog and must be deployed with the notification-capable Python controller.
 
 ## Commands and configuration
 
@@ -144,48 +147,95 @@ Useful later: keep a known-good local copy that boots without Git access, give
 each stick a unique hostname/physical label, retain bounded logs, and compare
 one failed stick against a working one using the same power supply/data wiring.
 
-## Optional supervisor, for later deployment
+## Boot service and deployment
 
-The existing boot script is now available at `Pi/autostart.sh`. It downloads
-from `http://wall.lan.magfest.net/magfest_led.py`, **not Git**. Publishing code
-to Git does not change that server's file. The script uses Python 3 explicitly,
-limits download retries/timeouts, checks for nonempty valid Python before
-replacing the installed copy, preserves the old copy as `magfest_led.py.previous`,
-and falls back to the installed copy when an update fails. Syntax validation
-does not verify dependencies, hardware compatibility, or download authenticity.
-The existing HTTP endpoint assumes a trusted LAN.
+`Pi/runled.sh` is the active launcher recovered from the working image.
+`Pi/autostart.sh` is historical and is not used by the current sticks. Its
+old HTTP server and `/home/pi` paths do not describe the current setup.
 
-Paths default to `/usr/bin/python3` and
-`/home/pi/rpi_ws281x/python/magfest_led.py`. Override them with
-`MAGFEST_PYTHON` and `MAGFEST_PROGRAM`; `MAGFEST_DOWNLOAD_URL` overrides the
-download URL. Confirm the actual Python environment before deploying. The
-script's caller needs permission to replace the installed file and a backup.
-It starts Python as root, or uses noninteractive `sudo` if called by another
-user, so startup cannot hang on a password prompt.
+The active launcher downloads `magfest_led.py` from the `main` branch at
+`https://raw.githubusercontent.com/MostlyAwol/MagFest-LEDs/main/magfest_led.py`
+and runs `/home/magfest/magfest_led.py` with `python3`. It retrieves a raw file;
+it does not clone a Git checkout. Publishing a change to that branch affects
+future successful boot downloads. No release/commit is pinned by default.
 
-Output is sent to `logger` with tag `magfest-led`; launcher messages use
-`magfest-autostart`. On a Pi using journald, inspect it with
-`sudo journalctl -b -t magfest-led -t magfest-autostart --no-pager` (the boot
-script is not a `magfest-led.service` unit). Retention depends on the image's
-logging configuration. If `logger` is unavailable, output stays attached to
-the caller. The script still backgrounds the controller and does not restart
-it after an exit. It also does not report whether background startup succeeded;
-inspect logs or query `STATUS` to confirm. A syntactically valid update that
-fails at runtime requires manual rollback or a supervisor/deployment workflow.
+The original launcher downloaded directly over the installed file and exited
+on download failure, so an offline or interrupted update could stop startup.
+It now downloads to a temporary file beside the installed program, checks for
+nonempty valid Python, backs up the installed copy to `magfest_led.py.previous`,
+and renames the candidate into place. An unavailable or invalid update leaves
+the installed copy in use. Curl has a five-second connection timeout and a
+15-second overall request limit; wget uses a ten-second network timeout and
+two attempts. Missing download tools also fall back to the installed copy.
+Without an installed copy or valid download, startup exits with an error.
 
-`magfest-led.service` is a sample, not installed by these changes. It assumes
-the checkout is `/opt/MagFest-LEDs` and dependencies belong to `/usr/bin/python3`;
-adjust both paths for the actual image. Disable the old boot launcher before
-enabling a service so two processes cannot drive the same GPIO or bind the port.
-`/etc/default/magfest-led` may contain `MAGFEST_SWITCH`, `MAGFEST_OID`, and
-`MAGFEST_SNMP_COMMUNITY` assignments; protect its permissions if using credentials.
+Overrides: `MAGFEST_PYTHON` chooses the interpreter (including a virtualenv),
+`MAGFEST_WORKDIR` changes `/home/magfest`, and `MAGFEST_DOWNLOAD_URL` chooses a
+different raw-file URL. Arguments are passed through to Python unchanged.
+The launcher keeps its foreground `exec` behavior and now uses unbuffered
+Python output. It does not add `sudo`, background the program, redirect its
+logs, or implement its own restart loop. The parent boot mechanism determines
+privileges, log capture, and whether a fatal exit causes a restart.
 
-The service restarts on failure after five seconds. Main-loop watchdog messages
-allow systemd to kill/restart a stalled process after 30 seconds. This is a
-process watchdog, not a hardware watchdog for a frozen OS. See
-[systemd.service](https://www.freedesktop.org/software/systemd/man/systemd.service.html).
-Service logs can be read with `sudo journalctl -u magfest-led -b --no-pager`;
-configure retention when the real image is available.
+The recovered `Pi/runled.service` confirms that systemd starts this launcher
+as a system service. Its existing configuration already restarted failed
+processes after five seconds and captured stdout/stderr in the journal. It
+also slept for 60 seconds on every start, including every restart, and had
+no watchdog for a running but hung process. No `User=` was specified, so the
+system service ran as root.
+
+The revised `Pi/runled.service` explicitly keeps root execution and journal
+capture, retains the working image's 60-second pre-start sleep, requests `lldpd`
+and the existing hostname service, and creates the runtime status directory.
+The LED unit explicitly starts after the hostname service has finished (or
+been skipped by its first-boot condition); the hostname unit itself is unchanged.
+Its existing `Before=network.target` also expresses that hostname setup should
+precede network startup. This ordering does not establish why the delay was
+needed; keep the delay until its cause can be investigated on physical hardware.
+The new Python retries LLDP/SNMP failures, but that does not prove it covers the
+original startup problem.
+
+`Type=notify` waits for the controller's readiness message, with a 120-second
+startup deadline covering the 60-second sleep, launcher download, and Python
+initialization. Every automatic restart also includes the sleep. Once ready,
+a 30-second watchdog checks main-loop progress;
+failures restart after five seconds. Automatic start rate limiting is disabled
+so repeated failures do not leave a headless stick permanently stopped.
+A deliberate `systemctl stop` still stops it. This is a process watchdog,
+not a hardware watchdog for a frozen Pi. Configuration semantics are described
+in [systemd.service](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
+and [systemd.unit](https://www.freedesktop.org/software/systemd/man/systemd.unit.html).
+
+**Deploy this service only with the updated notification-capable Python
+controller (`3.2026.10.21` in this checkout).** The old Python program never
+sends readiness/watchdog messages and would repeatedly time out under this
+unit. Confirm that the launcher's download URL serves the updated controller,
+or point it at the tested revision before installing the service. An old cached
+copy is not a compatible fallback for the new notification-based unit. These
+repository edits have not installed or restarted anything on a Pi.
+
+`Pi/set-hostname-from-mac.service` is the existing working hostname setup and
+has been left unchanged. The earlier root-level `magfest-led.service` is a
+generic alternative sample; the recovered `Pi/runled.service` is now the
+relevant unit. Do not enable both LED services.
+
+On a test stick, inspect the real unit, recent logs, and restart count with:
+
+```sh
+sudo systemctl cat runled.service
+sudo systemctl status runled.service --no-pager
+sudo journalctl -u runled.service -b -n 100 --no-pager
+sudo systemctl show runled.service -p MainPID -p NRestarts -p Result
+```
+
+Journal retention still depends on the Pi image. Syntax validation in the
+launcher does not verify dependencies or hardware compatibility. A valid Python
+update that fails at runtime needs manual rollback or a separate release/rollback
+mechanism; `.previous` is a backup, not automatic rollback. It represents the
+last installed file, not necessarily a hardware-tested version. A restart also
+runs the launcher again and retries its update, so a broken revision served
+from `main` can cause repeated restarts until the revision or URL is corrected.
+Pinning the fleet to a tested commit before the event would avoid that drift.
 
 ## Verification and first-stick checks
 
@@ -204,4 +254,5 @@ are pinned until the working Pi OS/Python/library combination is known.
 Before updating the fleet, try one stick: boot with the switch absent, select
 an animation, restore the network/SNMP and return to `BANDWIDTH`, check `STATUS`,
 and send SIGTERM to verify cleanup. Compare real traffic and counter selection
-with the switch. Test the optional supervisor separately before relying on it.
+with the switch. Test readiness, watchdog recovery, and restart behavior under the real service
+before updating the remaining sticks.

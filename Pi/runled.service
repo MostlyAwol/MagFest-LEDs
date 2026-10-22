@@ -1,0 +1,31 @@
+[Unit]
+Description=MagFest LED Controller
+After=network-online.target lldpd.service set-hostname-from-mac.service
+Wants=network-online.target lldpd.service set-hostname-from-mac.service
+StartLimitIntervalSec=0
+
+[Service]
+# Requires the updated controller's READY=1 and WATCHDOG=1 notifications.
+Type=notify
+NotifyAccess=main
+User=root
+ExecStart=/home/magfest/runled.sh
+WorkingDirectory=/home/magfest
+RuntimeDirectory=magfest-led
+# Retain the working image's settling delay until tested on physical hardware.
+ExecStartPre=/bin/sleep 60
+TimeoutStartSec=120
+Restart=on-failure
+RestartSec=5
+WatchdogSec=30
+
+KillSignal=SIGTERM
+TimeoutStopSec=15
+KillMode=control-group
+LimitCORE=0
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

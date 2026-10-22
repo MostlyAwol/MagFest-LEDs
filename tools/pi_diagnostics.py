@@ -52,8 +52,8 @@ def main():
         ["vcgencmd", "get_throttled"], ["vcgencmd", "measure_temp"],
         ["df", "-h", "/"], ["df", "-i", "/"],
         ["systemctl", "--failed", "--no-pager"],
-        ["systemctl", "status", "magfest-led", "lldpd", "--no-pager"],
-        ["journalctl", "-u", "magfest-led", "-b", "-n", "100", "--no-pager"],
+        ["systemctl", "status", "runled", "lldpd", "--no-pager"],
+        ["journalctl", "-u", "runled", "-b", "-n", "100", "--no-pager"],
         ["lldpctl", "-f", "keyvalue"],
         ["git", "rev-parse", "HEAD"], ["git", "status", "--short"],
     ):

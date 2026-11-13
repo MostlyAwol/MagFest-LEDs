@@ -57,18 +57,15 @@ health = {"state": "starting", "mode": "BANDWIDTH", "snmp_failures": 0,
 started_at = time.monotonic()
 last_led_progress = started_at
 
-
 def pause(seconds):
     """Allow every animation delay to be interrupted by a mode change."""
     exit_event.wait(seconds)
-
 
 def status():
     return dict(health, hostname=hostname, version=version, switch_ip=switch_ip,
                 oid=switch_mib, pid=os.getpid(),
                 uptime_seconds=round(time.monotonic() - started_at, 1),
                 timestamp=time.time())
-
 
 def notify(message):
     address = os.environ.get("NOTIFY_SOCKET")
@@ -84,12 +81,10 @@ def notify(message):
     except OSError:
         log.warning("Could not notify systemd", exc_info=True)
 
-
 def show_strip(strip):
     global last_led_progress
     strip.show()
     last_led_progress = time.monotonic()
-
 
 def check_workers():
     if not worker_errors.empty():
@@ -97,7 +92,6 @@ def check_workers():
     if LED_thread is not None and LED_thread.is_alive():
         if time.monotonic() - last_led_progress > 15:
             raise RuntimeError("LED worker has made no progress for 15 seconds")
-
 
 def start_led(target, *arguments):
     global LED_thread, last_led_progress
@@ -112,7 +106,6 @@ def start_led(target, *arguments):
             worker_errors.put(error)
     LED_thread = threading.Thread(target=guarded, name="led", daemon=True)
     LED_thread.start()
-
 
 def shutdown(signum, frame):
     global running, stop_threads
@@ -412,7 +405,6 @@ def counter_rate(previous, current, elapsed, bits):
         delta += maximum
     return delta * 8 / elapsed
 
-
 def MonitorBandwidth(switch_ip, snmp_mib):
     global last_percent, last_scale, last_led_progress
     previous = None
@@ -475,7 +467,6 @@ def MonitorBandwidth(switch_ip, snmp_mib):
             last_led_progress = time.monotonic()
         pause(1)
 
-
 def parse_command(data):
     words = data.decode("ascii").split()
     if not words:
@@ -499,7 +490,6 @@ def parse_command(data):
     if not 1 <= value <= (60 if mode == "FILL" else max_speed):
         raise ValueError("amount/speed out of range")
     return mode, color, value
-
 
 def SocketThread():
     while running:
@@ -539,7 +529,6 @@ def SocketThread():
         except OSError:
             log.debug("UDP reply failed", exc_info=True)
 
-
 def StopLED():
     global stop_threads, last_percent, last_scale
     stop_threads = True
@@ -553,7 +542,6 @@ def StopLED():
     if running:
         stop_threads = False
         exit_event.clear()
-
 
 def get_switch_ip(interface="eth0"):
     try:
@@ -574,7 +562,6 @@ def get_switch_ip(interface="eth0"):
         log.warning("Switch discovery failed: %s", error)
         return None
 
-
 def write_status(path):
     try:
         destination = Path(path)
@@ -584,7 +571,6 @@ def write_status(path):
         temporary.replace(destination)
     except OSError:
         log.exception("Could not write status file %s", path)
-
 
 def apply_command(command):
     mode, color, value = command
@@ -613,7 +599,6 @@ def apply_command(command):
                    "BEAT": Beat, "RBEAT": RBeat, "RBBEAT": RBBeat}
         arguments = (strip, value) if mode == "RBBEAT" else ((strip, color) if mode == "FF" else (strip, color, value))
         start_led(effects[mode], *arguments)
-
 
 def main():
     global strip, serversocket, LED_thread, running, switch_ip, switch_mib
@@ -679,7 +664,6 @@ def main():
         strip.deinit()
         health["state"] = "exited"
         write_status(args.status_file)
-
 
 if __name__ == "__main__":
     try:
